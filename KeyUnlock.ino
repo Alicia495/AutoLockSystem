@@ -1,6 +1,6 @@
 #include <Servo.h>
 #include <MsTimer2.h>
-Servo key;
+Servo key;//鍵のサーボの名前
 
 void rainbow();
 
