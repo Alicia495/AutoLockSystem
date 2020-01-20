@@ -16,6 +16,8 @@ void setup() {
   pinMode(11,OUTPUT);//LEDのB
   pinMode(8,OUTPUT);//SD
 
+  pinMode(A3, INPUT);//switch
+
   MsTimer2::set(200, corlor);//200msごとに色を変える（解錠時）
 }
 
@@ -77,11 +79,23 @@ void loop() {
       flag = false;
     }
   }
+
+  else if(digitalRead(A3) == LOW){
+    MsTimer2::start();
+    Serial.write("ON");
+    digitalWrite(8, HIGH);
+    key.write(0);
+    delay(1000);
+
+    key.write(65);
+    delay(1000);
+  }
+  Serial.println(flag);
   delay(5);
 }
 
 int sel = 0;
-void corlor(){　//7色で光らせる用の関数　順番に立ち上がる
+void corlor(){ //7色で光らせる用の関数 順番に立ち上がる
   if(sel ==0){
     digitalWrite(9,HIGH);
     digitalWrite(10,LOW);
@@ -123,7 +137,7 @@ void corlor(){　//7色で光らせる用の関数　順番に立ち上がる
 
 int r = 255,g = 0,b = 0;//なめらかな虹色を作るための変数
 
-void rainbow(){　//なめらかな虹色になる値を吐く関数　今は使用してない
+void rainbow(){ //なめらかな虹色になる値を吐く関数　今は使用してない
   if(r >=255 && b <= 0 && g < 255) g++;
   else if(g >= 255 && b <= 0 && r > 0) r--;
   else if(g >= 255 && r <= 0 && b < 255) b++;
