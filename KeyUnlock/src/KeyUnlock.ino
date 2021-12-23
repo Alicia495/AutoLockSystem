@@ -3,7 +3,17 @@
 #include <MsTimer2.h>
 #include <EEPROM.h>
 Servo key;//鍵のサーボの名前
-//0b00000000
+/*
+ラズパイとの通信規格
+上位4bit アドレス
+下位4bit データ
+アドレス                    データ
+0000 鍵の操作　             0施錠　1 開錠
+0001 LEDの点灯許可          0不許可　1許可
+0010 LEDのカラーサイクル　   0-15
+
+その他アドレス　未実装
+*/
 //eepromのアドれす2に最期に操作した鍵の状態を保存してます 0で施錠　1で解錠
 
 void rainbow();
@@ -29,13 +39,30 @@ void setup() {
 //0 130 65
 bool flag = true;//鍵の状態を示すフラグ
 bool SW = false;
+bool LED = false;
+char colorCycle = 0;
 
 void loop() {
   // put your main code here, to run repeatedly:
   bool A = digitalRead(A1),B = digitalRead(A0); //A1のみがlowになると解錠、A0のみがlowになると施錠します
   digitalWrite(8,LOW);//サーボ電源用の降圧レギュレータ作動用のピン
-  if(Serial.available()){
-    char data = Serial.read();
+  if(Serial.available()){//ラズパイでの操作受付
+    char rawData = Serial.read();
+    char addr = (rawData >> 4);
+    char data = (rawData & 0x0F);
+
+    if(addr == 0b0000){//鍵の操作
+      if(data == 1) doorUnlock();
+      else doorLock();
+    }
+    else if(addr == 0b0001){//LED点灯の許可
+      if(data == 0) LED =false;
+      else LED = true;
+    }
+    else if(addr == 0b0010){//LEDのカラーパターンの選択
+      colorCycle = data;
+    }
+
   }
 
   if(A3 == LOW && SW == false){//ボタンが押されたら施錠、開錠操作
@@ -51,12 +78,6 @@ void loop() {
   if(A3 == HIGH && SW == true){//チャタリング対策
     SW = false;
   }
-
-
-
-
-
-
 }
 
 void doorLock(){
