@@ -1,6 +1,10 @@
+#include <Arduino.h>
 #include <Servo.h>
 #include <MsTimer2.h>
+#include <EEPROM.h>
 Servo key;//鍵のサーボの名前
+//0b00000000
+//eepromのアドれす2に最期に操作した鍵の状態を保存してます 0で施錠　1で解錠
 
 void rainbow();
 
@@ -24,74 +28,98 @@ void setup() {
 
 //0 130 65
 bool flag = true;//鍵の状態を示すフラグ
+bool SW = false;
 
 void loop() {
   // put your main code here, to run repeatedly:
-  int A = digitalRead(A1),B = digitalRead(A0); //A1のみがlowになると解錠、A0のみがlowになると施錠します
+  bool A = digitalRead(A1),B = digitalRead(A0); //A1のみがlowになると解錠、A0のみがlowになると施錠します
   digitalWrite(8,LOW);//サーボ電源用の降圧レギュレータ作動用のピン
-  if(A != B){
-    if(A == 0) {
-      digitalWrite(9,HIGH);
-      digitalWrite(10,HIGH);
-      digitalWrite(11,LOW);
-      
-      digitalWrite(8,HIGH);
-      key.write(0);
-      
-      delay(2000);
-      
-      key.write(65);
-      delay(1000);
-      
-      digitalWrite(9,LOW);
-      digitalWrite(10,HIGH);
-      digitalWrite(11,LOW);
-      
-      delay(1000);
-      flag = true;
-      MsTimer2::start();
-    }
-    else if(B == 0) {
-      MsTimer2::stop();
-      digitalWrite(9,HIGH);
-      digitalWrite(10,HIGH);
-      digitalWrite(11,LOW);
-      
-      digitalWrite(8,HIGH);
-      key.write(120);
-      
-      delay(2000);
-      
-      key.write(65);
-      
-      delay(1000);
-      
-      digitalWrite(9,HIGH);
-      digitalWrite(10,LOW);
-      digitalWrite(11,LOW);
-      
-      delay(1000);
-      
-      digitalWrite(9,LOW);
-      digitalWrite(10,LOW);
-      digitalWrite(11,LOW);
-      
-      flag = false;
-    }
+  if(Serial.available()){
+    char data = Serial.read();
   }
 
-  else if(digitalRead(A3) == LOW){
-    MsTimer2::start();
-    Serial.write("ON");
-    digitalWrite(8, HIGH);
-    key.write(0);
-    delay(1000);
-
-    key.write(65);
-    delay(1000);
+  if(A3 == LOW && SW == false){//ボタンが押されたら施錠、開錠操作
+    if(EEPROM.read(2) == 0){
+      doorUnlock();
+    }
+    else{
+      doorLock();
+    }
+    SW = true;
+    delay(100);
   }
-  Serial.println(flag);
-  delay(5);
+  if(A3 == HIGH && SW == true){//チャタリング対策
+    SW = false;
+  }
+
+
+
+
+
+
+}
+
+void doorLock(){
+  MsTimer2::stop();
+  digitalWrite(9,HIGH);
+  digitalWrite(10,HIGH);
+  digitalWrite(11,LOW);
+  
+  digitalWrite(8,HIGH);
+  key.write(120);
+  
+  delay(2000);
+  
+  key.write(65);
+  digitalWrite(9,LOW);
+  digitalWrite(10,LOW);
+  digitalWrite(11,LOW);
+  for(int i = 0;i < 5;i++){
+    digitalWrite(9,HIGH);
+    digitalWrite(10,LOW);
+    digitalWrite(11,LOW);
+    delay(200);
+    digitalWrite(9,LOW);
+    digitalWrite(10,LOW);
+    digitalWrite(11,LOW);
+    delay(200);
+    
+  }
+  
+  EEPROM.write(2,0);
+  
+  flag = false;
+}
+
+void doorUnlock(){
+  digitalWrite(9,HIGH);
+  digitalWrite(10,HIGH);
+  digitalWrite(11,LOW);
+  
+  digitalWrite(8,HIGH);
+  key.write(0);
+  
+  delay(2000);
+  
+  key.write(65);
+  digitalWrite(9,LOW);
+  digitalWrite(10,LOW);
+  digitalWrite(11,LOW);
+  for(int i = 0;i < 5;i++){
+    digitalWrite(9,LOW);
+    digitalWrite(10,HIGH);
+    digitalWrite(11,LOW);
+    delay(200);
+    digitalWrite(9,LOW);
+    digitalWrite(10,LOW);
+    digitalWrite(11,LOW);
+    delay(200);
+    
+  }
+
+  flag = true;
+  EEPROM.write(2,1);
+  MsTimer2::start();
 }
 
 int sel = 0;
@@ -144,4 +172,9 @@ void rainbow(){ //なめらかな虹色になる値を吐く関数　今は使�
   else if(b >= 255 && r <= 0 && g > 0) g--;
   else if(b >= 255 && g <= 0 && r < 255) r++;
   else if(r >= 255 && g <= 0 && b > 0) b--;
+  else{
+    r = 255;
+    g = 0;
+    b = 0;
+  }
 }
